@@ -25,9 +25,7 @@ type Alog struct {
 // New creates a new Alog object that writes to the provided io.Writer.
 // If nil is provided the output will be directed to os.Stdout.
 func New(w io.Writer) *Alog {
-	//msgCh := chan string
-	msgCh := make(chan string)
-	errorCh := make(chan error)
+
 	if w == nil {
 
 		w = os.Stdout
@@ -43,9 +41,17 @@ func New(w io.Writer) *Alog {
 // the caller from being blocked.
 func (al Alog) Start() {
 
-	/* 	for {
-		al.msgCh
-	} */
+	wg := &sync.WaitGroup{}
+	for {
+		select {
+		case msg := <-al.msgCh:
+			wg.Add(1)
+			go al.write(msg, wg)
+		case <-al.shutdownCh:
+			wg.Wait()
+			al.shutdown()
+		}
+	}
 
 }
 
